@@ -1,12 +1,11 @@
 use std::mem::{size_of, zeroed};
 
 use windows::{
-    core::{PCWSTR, PWSTR},
+    core::PWSTR,
     Win32::{
-        Foundation::{CloseHandle, ERROR_INSUFFICIENT_BUFFER, HANDLE, MAX_PATH},
+        Foundation::{CloseHandle, ERROR_INSUFFICIENT_BUFFER, HANDLE},
         System::{
             Memory::{GetProcessHeap, HeapAlloc, HeapFree, HEAP_NONE, HEAP_ZERO_MEMORY},
-            SystemInformation::GetSystemDirectoryW,
             Threading::{
                 CreateProcessW, DeleteProcThreadAttributeList, InitializeProcThreadAttributeList,
                 OpenProcess, UpdateProcThreadAttribute, CREATE_UNICODE_ENVIRONMENT,
@@ -36,19 +35,14 @@ fn main() {
     let ppid: u32 = args[1].parse().unwrap();
 
     // open target process
-    println!("[+] get parent process handle -> {}", ppid);
     let phandle = unsafe { OpenProcess(PROCESS_ALL_ACCESS, false, ppid).unwrap() };
-    println!("[+] handle value -> {:#x}", phandle.0);
 
     // parent process spoofing
-    println!("[+] create new process using parent process handle");
-    let pid = unsafe {
-        let pid = create_process_with_handle(phandle, &args[2..]).unwrap();
+    unsafe {
+        create_process_with_handle(phandle, &args[2..]).unwrap();
         CloseHandle(phandle).expect("Failed closing handle");
-        pid
     };
 
-    println!("[+] new process -> {}", pid);
 }
 
 /// # Safety
@@ -95,10 +89,7 @@ pub unsafe fn create_process_with_handle(
                 let mut cmdline: Vec<_> = args.join(" ").encode_utf16().collect();
                 cmdline.push(0x0);
 
-                println!("CMD len {}", cmdline.len());
-
-                let mut system_path: [u16; MAX_PATH as _] = zeroed();
-                GetSystemDirectoryW(Some(&mut system_path));
+                // println!("CMD len {}", cmdline.len());
 
                 CreateProcessW(
                     None,
@@ -108,7 +99,7 @@ pub unsafe fn create_process_with_handle(
                     false,
                     CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT,
                     None,
-                    PCWSTR::from_raw(system_path.as_ptr()),
+                    None,
                     &si.StartupInfo,
                     &mut pi,
                 )?;
