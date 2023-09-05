@@ -42,7 +42,6 @@ fn main() {
         create_process_with_handle(phandle, &args[2..]).unwrap();
         CloseHandle(phandle).expect("Failed closing handle");
     };
-
 }
 
 /// # Safety
